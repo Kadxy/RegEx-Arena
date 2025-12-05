@@ -313,7 +313,7 @@ Original pattern: \`${pattern}\`
 - Add appropriate quantifiers for flexibility
 
 **Improved pattern:**
-\`${pattern.replace(/\./g, '\\.')}\`
+\`${pattern.replace(/[\\.$^{}[\]()]/g, '\\$&')}\`
 
 This should resolve the issue while maintaining the intended matching behavior.`;
   }
