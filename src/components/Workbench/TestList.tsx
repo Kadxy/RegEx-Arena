@@ -5,9 +5,10 @@ import type { TestCase } from '../../types';
 
 interface TestListProps {
   tests: TestCase[];
+  onDeleteTest?: (testId: string) => void;
 }
 
-export const TestList: React.FC<TestListProps> = ({ tests }) => {
+export const TestList: React.FC<TestListProps> = ({ tests, onDeleteTest }) => {
   const { workbenchPattern, workbenchFlags } = useAppStore();
 
   const testResults = useMemo(() => {
@@ -29,20 +30,19 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
   const passRate = tests.length > 0 ? (passedCount / tests.length) * 100 : 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+    <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Test Cases</h3>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
             {passedCount}/{tests.length} passing
           </span>
           <span
-            className={`px-2 py-1 rounded text-xs font-semibold ${
+            className={`px-3 py-1 rounded-full text-xs font-bold ${
               passRate >= 90
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
                 : passRate >= 70
-                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200'
             }`}
           >
             {passRate.toFixed(0)}%
@@ -51,11 +51,15 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
       </div>
 
       {/* Pass rate bar */}
-      <div className="mb-4">
-        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="mb-6">
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
           <div
-            className={`h-full transition-all duration-300 ${
-              passRate >= 90 ? 'bg-green-500' : passRate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+            className={`h-full transition-all duration-500 ${
+              passRate >= 90 
+                ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' 
+                : passRate >= 70 
+                ? 'bg-gradient-to-r from-amber-400 to-amber-600' 
+                : 'bg-gradient-to-r from-rose-400 to-rose-600'
             }`}
             style={{ width: `${passRate}%` }}
           />
@@ -63,53 +67,65 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
       </div>
 
       {/* Test cases */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-3 max-h-[500px] overflow-y-auto">
         {testResults.map(({ test, result, matches, passed }) => (
           <div
             key={test.id}
-            className={`border rounded-lg p-3 transition-all ${
+            className={`border-2 rounded-xl p-4 transition-all ${
               passed
-                ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
-                : 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20'
+                ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10'
+                : 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/10'
             }`}
           >
-            <div className="flex items-start gap-2">
-              <span className="text-xl">{passed ? '✓' : '✗'}</span>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <code className="text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded font-mono">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">{passed ? '✓' : '✗'}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <code className="text-sm bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg font-mono border border-gray-300 dark:border-gray-600">
                     {test.input}
                   </code>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     should {test.shouldMatch ? 'match' : 'not match'}
                   </span>
+                  {onDeleteTest && test.id.startsWith('custom-') && (
+                    <button
+                      onClick={() => onDeleteTest(test.id)}
+                      className="ml-auto text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 font-medium"
+                      title="Delete test case"
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
                 </div>
 
                 {/* Highlighted matches */}
                 {matches.length > 0 && (
-                  <div className="mt-2">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      {matches.length} match(es) found:
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">
+                      ✨ {matches.length} match(es) found:
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {matches.map((match, idx) => (
                         <div
                           key={idx}
-                          className="text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded"
+                          className="text-sm bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
                         >
-                          <span className="font-mono">
+                          <span className="font-mono break-all">
                             {test.input.substring(0, match.start)}
-                            <mark className="bg-yellow-300 dark:bg-yellow-600 px-1">
+                            <mark className="bg-amber-300 dark:bg-amber-600 px-1 py-0.5 rounded font-bold">
                               {test.input.substring(match.start, match.end)}
                             </mark>
                             {test.input.substring(match.end)}
                           </span>
                           {match.groups && Object.keys(match.groups).length > 0 && (
-                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                              Groups:{' '}
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                              <span className="font-semibold">Capture Groups: </span>
                               {Object.entries(match.groups).map(([key, value]) => (
-                                <span key={key} className="ml-2">
-                                  {key}: <code className="bg-gray-100 dark:bg-gray-700 px-1">{value}</code>
+                                <span key={key} className="ml-2 inline-block">
+                                  <span className="text-purple-600 dark:text-purple-400">{key}</span>:{' '}
+                                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                    {value}
+                                  </code>
                                 </span>
                               ))}
                             </div>
@@ -121,8 +137,8 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
                 )}
 
                 {result.error && (
-                  <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    Error: {result.error}
+                  <div className="text-xs text-rose-600 dark:text-rose-400 mt-2 font-medium">
+                    ⚠️ Error: {result.error}
                   </div>
                 )}
               </div>
@@ -133,9 +149,9 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
 
       {/* Failed cases summary */}
       {passRate < 100 && (
-        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
-            Failed Cases ({tests.length - passedCount}):
+        <div className="mt-6 p-4 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800 rounded-xl">
+          <p className="text-sm font-bold text-rose-800 dark:text-rose-200 mb-3">
+            ⚠️ Failed Cases ({tests.length - passedCount}):
           </p>
           <div className="flex flex-wrap gap-2">
             {testResults
@@ -143,7 +159,7 @@ export const TestList: React.FC<TestListProps> = ({ tests }) => {
               .map(({ test }) => (
                 <code
                   key={test.id}
-                  className="text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-1 rounded"
+                  className="text-xs bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-300 px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-700 font-mono"
                 >
                   {test.input}
                 </code>
