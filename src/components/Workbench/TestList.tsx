@@ -6,9 +6,24 @@ import type { TestCase } from '../../types';
 interface TestListProps {
   tests: TestCase[];
   onDeleteTest?: (testId: string) => void;
+  onEditTest?: (testId: string, currentValue: string) => void;
+  editingTestId?: string | null;
+  editValue?: string;
+  onEditValueChange?: (value: string) => void;
+  onSaveEdit?: (testId: string) => void;
+  onCancelEdit?: () => void;
 }
 
-export const TestList: React.FC<TestListProps> = ({ tests, onDeleteTest }) => {
+export const TestList: React.FC<TestListProps> = ({ 
+  tests, 
+  onDeleteTest,
+  onEditTest,
+  editingTestId,
+  editValue,
+  onEditValueChange,
+  onSaveEdit,
+  onCancelEdit
+}) => {
   const { workbenchPattern, workbenchFlags } = useAppStore();
 
   const testResults = useMemo(() => {
@@ -31,6 +46,7 @@ export const TestList: React.FC<TestListProps> = ({ tests, onDeleteTest }) => {
 
   return (
     <div>
+      {/* Summary Stats */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -52,7 +68,7 @@ export const TestList: React.FC<TestListProps> = ({ tests, onDeleteTest }) => {
 
       {/* Pass rate bar */}
       <div className="mb-6">
-        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
           <div
             className={`h-full transition-all duration-500 ${
               passRate >= 90 
@@ -66,104 +82,134 @@ export const TestList: React.FC<TestListProps> = ({ tests, onDeleteTest }) => {
         </div>
       </div>
 
-      {/* Test cases */}
-      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+      {/* Compact Test Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
         {testResults.map(({ test, result, matches, passed }) => (
           <div
             key={test.id}
-            className={`border-2 rounded-xl p-4 transition-all ${
+            className={`border-2 rounded-lg p-3 transition-all ${
               passed
-                ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10'
-                : 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/10'
+                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/10'
+                : 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/10'
             }`}
           >
-            <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0">{passed ? '✓' : '✗'}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <code className="text-sm bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg font-mono border border-gray-300 dark:border-gray-600">
-                    {test.input}
-                  </code>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                    should {test.shouldMatch ? 'match' : 'not match'}
-                  </span>
-                  {onDeleteTest && test.id.startsWith('custom-') && (
+            {/* Card Header */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-lg">{passed ? '✓' : '✗'}</span>
+              <div className="flex items-center gap-1">
+                {onEditTest && test.id.startsWith('custom-') && editingTestId !== test.id && (
+                  <button
+                    onClick={() => onEditTest(test.id, test.input)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    title="Edit test case"
+                  >
+                    Edit
+                  </button>
+                )}
+                {onDeleteTest && test.id.startsWith('custom-') && (
+                  <>
+                    <span className="text-gray-400">•</span>
                     <button
                       onClick={() => onDeleteTest(test.id)}
-                      className="ml-auto text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 font-medium"
+                      className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300"
                       title="Delete test case"
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
-                  )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Test Input */}
+            {editingTestId === test.id ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => onEditValueChange?.(e.target.value)}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveEdit?.(test.id);
+                    if (e.key === 'Escape') onCancelEdit?.();
+                  }}
+                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => onSaveEdit?.(test.id)}
+                    className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={onCancelEdit}
+                    className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <code className="text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded font-mono block break-all border border-gray-300 dark:border-gray-600 mb-2">
+                  {test.input}
+                </code>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  Should {test.shouldMatch ? 'match' : 'not match'}
                 </div>
 
-                {/* Highlighted matches */}
+                {/* Match Info */}
                 {matches.length > 0 && (
-                  <div className="mt-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">
-                      ✨ {matches.length} match(es) found:
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      {matches.length} match(es)
                     </div>
-                    <div className="space-y-2">
-                      {matches.map((match, idx) => (
-                        <div
-                          key={idx}
-                          className="text-sm bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                        >
-                          <span className="font-mono break-all">
-                            {test.input.substring(0, match.start)}
-                            <mark className="bg-amber-300 dark:bg-amber-600 px-1 py-0.5 rounded font-bold">
-                              {test.input.substring(match.start, match.end)}
-                            </mark>
-                            {test.input.substring(match.end)}
-                          </span>
-                          {match.groups && Object.keys(match.groups).length > 0 && (
-                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                              <span className="font-semibold">Capture Groups: </span>
-                              {Object.entries(match.groups).map(([key, value]) => (
-                                <span key={key} className="ml-2 inline-block">
-                                  <span className="text-purple-600 dark:text-purple-400">{key}</span>:{' '}
-                                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">
-                                    {value}
-                                  </code>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {matches.slice(0, 1).map((match, idx) => (
+                      <div key={idx} className="text-xs">
+                        <code className="bg-white dark:bg-gray-800 px-1 py-0.5 rounded text-xs">
+                          <mark className="bg-amber-300 dark:bg-amber-600 px-0.5 rounded">
+                            {test.input.substring(match.start, match.end)}
+                          </mark>
+                        </code>
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {result.error && (
-                  <div className="text-xs text-rose-600 dark:text-rose-400 mt-2 font-medium">
-                    ⚠️ Error: {result.error}
+                  <div className="text-xs text-rose-600 dark:text-rose-400 mt-2">
+                    Error: {result.error}
                   </div>
                 )}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Failed cases summary */}
+      {/* Failed cases summary - More compact */}
       {passRate < 100 && (
-        <div className="mt-6 p-4 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-800 rounded-xl">
-          <p className="text-sm font-bold text-rose-800 dark:text-rose-200 mb-3">
-            ⚠️ Failed Cases ({tests.length - passedCount}):
+        <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg">
+          <p className="text-xs font-semibold text-rose-800 dark:text-rose-200 mb-2">
+            Failed: {tests.length - passedCount} case(s)
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {testResults
               .filter((r) => !r.passed)
+              .slice(0, 5)
               .map(({ test }) => (
                 <code
                   key={test.id}
-                  className="text-xs bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-300 px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-700 font-mono"
+                  className="text-xs bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-300 px-2 py-0.5 rounded border border-rose-300 dark:border-rose-700 font-mono"
                 >
-                  {test.input}
+                  {test.input.length > 20 ? test.input.substring(0, 20) + '...' : test.input}
                 </code>
               ))}
+            {tests.length - passedCount > 5 && (
+              <span className="text-xs text-gray-500">
+                +{tests.length - passedCount - 5} more
+              </span>
+            )}
           </div>
         </div>
       )}

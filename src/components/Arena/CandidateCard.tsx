@@ -45,8 +45,8 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
       </div>
 
       {candidate.explanation && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 italic">
-          💡 {candidate.explanation}
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          {candidate.explanation}
         </p>
       )}
 
@@ -70,7 +70,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
       {candidate.failedCases.length > 0 && (
         <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 rounded-lg">
           <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-2">
-            ⚠️ Failed cases ({candidate.failedCases.length}):
+            Failed cases ({candidate.failedCases.length}):
           </p>
           <div className="flex flex-wrap gap-2">
             {candidate.failedCases.slice(0, 3).map((failedCase, idx) => (
@@ -96,11 +96,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
         size="md" 
         className="w-full font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
       >
-        <span className="flex items-center justify-center gap-2">
-          <span>🎨</span>
-          <span>Open in Editor</span>
-          <span>→</span>
-        </span>
+        Open in Editor →
       </Button>
     </Card>
   );

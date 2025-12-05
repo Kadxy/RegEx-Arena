@@ -4,11 +4,17 @@ import { Button } from '../common/Button';
 
 type InputMode = 'simple' | 'highlight';
 
+interface Selection {
+  text: string;
+  start: number;
+  end: number;
+}
+
 export const Portal: React.FC = () => {
   const [localIntent, setLocalIntent] = useState('');
   const [inputMode, setInputMode] = useState<InputMode>('simple');
   const [highlightText, setHighlightText] = useState('');
-  const [selectedText, setSelectedText] = useState('');
+  const [selections, setSelections] = useState<Selection[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { submitIntent, skipToArena } = useAppStore();
@@ -21,7 +27,9 @@ export const Portal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const intent = inputMode === 'simple' ? localIntent : `Extract patterns like: "${selectedText}" from text`;
+    const intent = inputMode === 'simple' 
+      ? localIntent 
+      : `Extract patterns like these: ${selections.map(s => `"${s.text}"`).join(', ')} from text`;
     if (intent.trim()) {
       useAppStore.setState({ intent });
       submitIntent();
@@ -38,9 +46,16 @@ export const Portal: React.FC = () => {
       const end = textareaRef.current.selectionEnd;
       if (start !== end) {
         const selected = highlightText.substring(start, end);
-        setSelectedText(selected);
+        // Add to selections if not already present
+        if (!selections.some(s => s.text === selected)) {
+          setSelections([...selections, { text: selected, start, end }]);
+        }
       }
     }
+  };
+
+  const removeSelection = (index: number) => {
+    setSelections(selections.filter((_, i) => i !== index));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -56,11 +71,6 @@ export const Portal: React.FC = () => {
       <div className="max-w-4xl w-full animate-fade-in">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-block mb-4">
-            <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-4 mx-auto">
-              <span className="text-4xl">🎯</span>
-            </div>
-          </div>
           <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             RegEx Arena
           </h1>
@@ -79,7 +89,7 @@ export const Portal: React.FC = () => {
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
-            🔍 Quick Search
+            Quick Search
           </button>
           <button
             onClick={() => setInputMode('highlight')}
@@ -89,7 +99,7 @@ export const Portal: React.FC = () => {
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
-            ✨ Highlight & Extract
+            Highlight & Extract
           </button>
         </div>
 
@@ -98,9 +108,6 @@ export const Portal: React.FC = () => {
           <form onSubmit={handleSubmit}>
             {inputMode === 'simple' ? (
               <div className="relative">
-                <div className="absolute left-6 top-1/2 transform -translate-y-1/2 text-2xl">
-                  🔍
-                </div>
                 <input
                   ref={inputRef}
                   type="text"
@@ -108,14 +115,14 @@ export const Portal: React.FC = () => {
                   onChange={(e) => setLocalIntent(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Describe what you want to match... (e.g., email addresses, phone numbers)"
-                  className="w-full pl-16 pr-6 py-6 text-lg bg-transparent border-none outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                  className="w-full pl-6 pr-6 py-6 text-lg bg-transparent border-none outline-none dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   autoComplete="off"
                 />
               </div>
             ) : (
               <div className="p-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Paste your text and highlight the pattern you want to extract:
+                  Paste your text and select multiple patterns you want to extract:
                 </label>
                 <textarea
                   ref={textareaRef}
@@ -123,15 +130,28 @@ export const Portal: React.FC = () => {
                   onChange={(e) => setHighlightText(e.target.value)}
                   onMouseUp={handleTextSelection}
                   onKeyUp={handleTextSelection}
-                  placeholder="Paste your text here, then select/highlight the words or patterns you want to extract..."
+                  placeholder="Paste your text here, then select/highlight multiple words or patterns you want to extract..."
                   className="w-full min-h-[150px] p-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-y"
                 />
-                {selectedText && (
+                {selections.length > 0 && (
                   <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Selected pattern:</p>
-                    <code className="text-sm font-mono bg-white dark:bg-gray-800 px-3 py-1 rounded border border-blue-300 dark:border-blue-700">
-                      {selectedText}
-                    </code>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Selected patterns ({selections.length}):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selections.map((selection, index) => (
+                        <div key={index} className="flex items-center gap-1 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-blue-300 dark:border-blue-700">
+                          <code className="text-sm font-mono">
+                            {selection.text}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => removeSelection(index)}
+                            className="text-xs text-gray-500 hover:text-red-600 ml-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -144,9 +164,9 @@ export const Portal: React.FC = () => {
                 variant="primary"
                 size="lg"
                 className="flex-1 text-lg py-4 shadow-lg hover:shadow-xl"
-                disabled={inputMode === 'simple' ? !localIntent.trim() : !selectedText.trim()}
+                disabled={inputMode === 'simple' ? !localIntent.trim() : selections.length === 0}
               >
-                ✨ Generate Regex Patterns
+                Generate Regex Patterns
               </Button>
               <button
                 type="button"
@@ -162,17 +182,14 @@ export const Portal: React.FC = () => {
         {/* Features */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
           <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur rounded-xl p-4">
-            <div className="text-2xl mb-2">🎯</div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">AI-Powered</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Smart pattern generation</p>
           </div>
           <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur rounded-xl p-4">
-            <div className="text-2xl mb-2">⚡</div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Real-time Testing</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Instant validation</p>
           </div>
           <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur rounded-xl p-4">
-            <div className="text-2xl mb-2">🚀</div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Test-Driven</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">Comprehensive benchmarks</p>
           </div>
